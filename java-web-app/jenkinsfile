@@ -1,0 +1,42 @@
+pipeline {
+  agent any
+  environment {
+    ECR_REPO = '302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app'
+  }
+  stages {
+    stage('Clone') {
+      steps {
+        git 'https://github.com/shivashankarbukka402/Project.git'
+      }
+    }
+    stage('Build') {
+      steps {
+        sh 'mvn clean package'
+      }
+    }
+    stage('SonarQube Analysis') {
+      steps {
+        withSonarQubeEnv('SonarQube') {
+          sh 'mvn sonar:sonar'
+        }
+      }
+    }
+    stage('Docker Build & Push') {
+      steps {
+        script {
+          sh """
+            $(aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $ECR_REPO)
+            docker build -t myapp .
+            docker tag myapp:latest $ECR_REPO:latest
+            docker push $ECR_REPO:latest
+          """
+        }
+      }
+    }
+    stage('Deploy to ECS') {
+      steps {
+        sh 'aws ecs update-service --cluster my-cluster --service my-service --force-new-deployment'
+      }
+    }
+  }
+}
