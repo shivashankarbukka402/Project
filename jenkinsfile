@@ -25,10 +25,10 @@ pipeline {
       steps {
         script {
           sh """
-            $(aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $ECR_REPO)
+            $(aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app)
             docker build -t myapp .
-            docker tag myapp:latest $ECR_REPO:latest
-            docker push $ECR_REPO:latest
+            docker tag myapp:latest 302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
+            docker push 302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
           """
         }
       }
