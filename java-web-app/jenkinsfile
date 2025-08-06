@@ -6,7 +6,8 @@ pipeline {
   stages {
     stage('Clone') {
       steps {
-        git 'https://github.com/shivashankarbukka402/Project.git'
+        git branch: git branch: 'main', url: 'https://github.com/shivashankarbukka402/Project.git'
+           
       }
     }
     stage('Build') {
