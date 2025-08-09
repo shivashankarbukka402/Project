@@ -1,5 +1,9 @@
 pipeline {
   agent any
+  tools {
+    maven 'Maven3'
+}
+
   environment {
     ECR_REPO = '302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app'
   }
