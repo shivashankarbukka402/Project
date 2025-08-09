@@ -21,7 +21,13 @@ pipeline {
       steps {
         dir('java-web-app') {
           withSonarQubeEnv('SonarQube') {
-            sh 'mvn sonar:sonar'
+             sh '''
+                    sonar-scanner \
+                      -Dsonar.projectKey=my-project \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=http://<your-server-ip>:9000 \
+                      -Dsonar.login=$SONAR_AUTH_TOKEN
+                    '''
           }
         }
       }
