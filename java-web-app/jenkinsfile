@@ -6,6 +6,8 @@ pipeline {
 
   environment {
     ECR_REPO = '302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app'
+    SONAR_HOST_URL='http://13.233.232.204:9000'
+
   }
   stages {
     stage('Clone') {
@@ -24,7 +26,7 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         dir('java-web-app') {
-          withSonarQubeEnv('SonarQube') {
+           withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]){
              sh '''
                     sonar-scanner \
                       -Dsonar.projectKey=my-project \
