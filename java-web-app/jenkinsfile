@@ -1,60 +1,92 @@
 pipeline {
-  agent any
-  tools {
-    maven 'Maven3'
-}
+    agent any
 
-  environment {
-    ECR_REPO = '302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app'
-    SONAR_HOST_URL='http://13.233.232.204:9000'
+    tools {
+        maven 'Maven3'               // Maven tool name from Jenkins
+        jdk 'Java17'                  // Java tool name from Jenkins
+    }
 
-  }
-  stages {
-    stage('Clone') {
-      steps {
-         git branch: 'main', url: 'https://github.com/shivashankarbukka402/Project.git'
-           
-      }
+    environment {
+        // AWS and Docker config
+        AWS_REGION       = 'ap-south-1'
+        ECR_REPO_NAME    = 'java-web-app'
+        ECS_CLUSTER      = 'java-ecs-cluster'
+        ECS_SERVICE      = 'java-ecs-service'
+        IMAGE_TAG        = "${BUILD_NUMBER}"
+
+        // SonarQube config
+        SONARQUBE_ENV    = 'SonarQube' // Name in Jenkins -> System config
+        PROJECT_KEY      = 'java-web-app'
     }
-    stage('Build') {
-      steps {
-        dir('java-web-app') {
-          sh 'mvn clean package'
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', 
+                    url: 'https://github.com/shivashankarbukka402/Project.git'
+            }
         }
-      }
-    }
-    stage('SonarQube Analysis') {
-      steps {
-        dir('java-web-app') {
-           withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN')]){
-             sh '''
-                    sonar-scanner \
-                      -Dsonar.projectKey=my-project \
-                      -Dsonar.sources=. \
-                      -Dsonar.host.url=http://<your-server-ip>:9000 \
-                      -Dsonar.login=$SONAR_AUTH_TOKEN
-                    '''
-          }
+
+        stage('Build with Maven') {
+            steps {
+                dir('java-web-app') {
+                    sh 'mvn clean package -DskipTests'
+                }
+            }
         }
-      }
-    }
-    stage('Docker Build & Push') {
-      steps {
-        script {
-          sh '''
-            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 302173659698.dkr.ecr.ap-south-1.amazonaws.com
-            docker build -t myapp .
-            docker tag myapp:latest 302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
-            docker push 302173659698.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest
-          '''
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    dir('java-web-app') {
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=${PROJECT_KEY} \
+                          -Dsonar.sources=src \
+                          -Dsonar.java.binaries=target \
+                          -Dsonar.host.url=http://<your-sonarqube-ip>:9000
+                        """
+                    }
+                }
+            }
         }
-      }
-    }
-    stage('Deploy to ECS') {
-      steps {
-        sh 'aws ecs update-service --cluster my-cluster --service my-service --force-new-deployment'
-      }
-    }
-  }
-}
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Docker Build & Push to ECR') {
+            steps {
+                script {
+                    sh """
+                    aws ecr get-login-password --region ${AWS_REGION} \
+                      | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+                    docker build -t ${ECR_REPO_NAME}:${IMAGE_TAG} java-web-app
+                    docker tag ${ECR_REPO_NAME}:${IMAGE_TAG} ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                    docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to ECS') {
+            steps {
+                script {
+                    sh """
+                    aws ecs update-service \
+                      --cluster ${ECS_CLUSTER} \
+                      --service ${ECS_SERVICE} \
+                      --force-new-deployment \
+                      --region ${AWS_REGION}
+                    """
+                }
+            }
+        }
+
+
 
