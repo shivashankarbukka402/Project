@@ -34,14 +34,21 @@ pipeline {
            }
       }
 
-      stage('Docker Build and Push') {
-          steps {
-                dir('devops-demo') {
-                    sh 'sudo docker build -t shiva9828/devops-demo:latest .'
-                    sh 'sudo docker push shiva9828/devops-demo:latest'
-               }
-          }
-      }
+       stage('Docker Build and Push') {
+            steps {
+                script { 
+                    sh '''
+                        ls -lrt
+                    '''
+                    dir('devops-demo') {
+                        dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f ${DOCKERFILE_BASE} .")
+                        docker.withRegistry('', "${DOCKER_REGISTRY_CRED_ID}") { 
+                            dockerImage.push() 
+                        }
+                    }
+                }
+            }
+        }
 
 
         stage('Deploy to EC2') {
