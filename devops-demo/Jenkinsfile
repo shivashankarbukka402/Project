@@ -12,7 +12,7 @@ pipeline {
         GIT_CREDENTIALS = 'shivashankarbukka402'
         IMAGE_TAG = 'latest'
         DOCKERFILE_BASE = 'Dockerfile'
-        DOCKER_REGISTRY_CRED_ID = 'shiva9828'
+        DOCKER_REGISTRY_CRED_ID = 'docker-token'
         DOCKER_USER    = 'shiva9828'
         DOCKER_IMAGE   = 'shiva9828/devops-demo'
     }
