@@ -2,20 +2,16 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven'
-        jdk 'Java11'
+        maven 'Maven'      // Jenkins Maven installation name
+        jdk 'Java11'       // Jenkins JDK installation name
     }
 
     environment {
         GIT_URL        = 'https://github.com/shivashankarbukka402/Project.git'
         GIT_BRANCH     = 'main'
         GIT_CREDENTIALS = 'shivashankarbukka402'
-        DOCKER_USER = 'shiva9828'
-        IMAGE_NAME = 'shiva9828/my-java-app'
-        IMAGE_TAG = 'latest'
-        DOCKERFILE_BASE = 'Dockerfile'
-        DOCKER_REGISTRY_CRED_ID = 'docker_token'
-        
+        DOCKER_USER    = 'shiva9828'
+        DOCKER_IMAGE   = 'devops-demo'
     }
 
     stages {
@@ -26,36 +22,44 @@ pipeline {
                     url: "${env.GIT_URL}"
             }
         }
-        stage('Docker Build and Push') {
-           stage('Docker Build and Push') {
-                steps {
-                     withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_PASS')]) {
-                       sh '''
-                            docker build -t shiva9828/devops-demo:latest .
-                            echo $DOCKER_PASS | docker login -u shiva9828 --password-stdin
-                            docker push shiva9828/devops-demo:latest
-                          '''
-                    }      
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean install -DskipTests'
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh 'docker build -t ${DOCKER_USER}/${DOCKER_IMAGE}:latest .'
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo $DOCKER_PASS | docker login -u ${DOCKER_USER} --password-stdin
+                        docker push ${DOCKER_USER}/${DOCKER_IMAGE}:latest
+                    '''
                 }
             }
-        }       
-            
-
-        
+        }
 
         stage('Deploy to EC2') {
             steps {
                 sshagent(['ec2-ssh-key']) {
                     sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@43.205.217.170"
-                        docker pull ${DOCKER_USER}/${IMAGE_NAME}:latest &&
-                        docker stop app || true &&
-                        docker rm app || true &&
-                        docker run -d --name app -p 8080:8080 ${DOCKER_USER}/${IMAGE_NAME}:latest
-                    "
+                        ssh -o StrictHostKeyChecking=no ubuntu@<EC2_PUBLIC_IP> "
+                        docker pull ${DOCKER_USER}/${DOCKER_IMAGE}:latest &&
+                        docker stop demo || true &&
+                        docker rm demo || true &&
+                        docker run -d --name demo -p 8080:8080 ${DOCKER_USER}/${DOCKER_IMAGE}:latest
+                        "
                     '''
                 }
             }
         }
     }
 }
+
