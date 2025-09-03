@@ -35,20 +35,19 @@ pipeline {
       }
 
        stage('Docker Build and Push') {
-            steps {
-                script { 
-                    sh '''
-                        ls -lrt
-                    '''
-                    dir('devops-demo') {
-                        dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f ${DOCKERFILE_BASE} .")
-                        docker.withRegistry('', "${DOCKER_REGISTRY_CRED_ID}") { 
-                            dockerImage.push() 
-                        }
+           steps {
+                dir('devops-demo') {
+                       withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', 
+                                                     usernameVariable: 'DOCKER_USER', 
+                                                     passwordVariable: 'DOCKER_PASS')]) {
+                       sh 'echo $DOCKER_PASS | sudo docker login -u $DOCKER_USER --password-stdin'
+                       sh 'sudo docker build -t $DOCKER_USER/devops-demo:latest .'
+                       sh 'sudo docker push $DOCKER_USER/devops-demo:latest'
                     }
-                }
-            }
-        }
+               }
+          }
+     }
+
 
 
         stage('Deploy to EC2') {
