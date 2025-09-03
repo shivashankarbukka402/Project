@@ -34,25 +34,15 @@ pipeline {
            }
       }
 
-      stage('Docker Build') {
+      stage('Docker Build and Push') {
           steps {
-               dir('devops-demo') {   // Dockerfile is also inside devops-demo
-                   sh 'docker build -t ${DOCKER_USER}/${DOCKER_IMAGE}:latest .'
+                dir('devops-demo') {
+                    sh 'sudo docker build -t shiva9828/devops-demo:latest .'
+                    sh 'sudo docker push shiva9828/devops-demo:latest'
                }
           }
-       }
+      }
 
-
-        stage('Docker Push') {
-            steps {
-                withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo $DOCKER_PASS | docker login -u ${DOCKER_USER} --password-stdin
-                        docker push ${DOCKER_USER}/${DOCKER_IMAGE}:latest
-                    '''
-                }
-            }
-        }
 
         stage('Deploy to EC2') {
             steps {
