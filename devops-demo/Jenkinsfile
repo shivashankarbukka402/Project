@@ -7,6 +7,9 @@ pipeline {
     }
 
     environment {
+        GIT_URL        = 'https://github.com/shivashankarbukka402/devops-demo.git'
+        GIT_BRANCH     = 'main'
+        GIT_CREDENTIALS = 'shivashankarbukka402'
         DOCKER_USER = 'shiva9828'
         IMAGE_NAME = 'shiva9828/my-java-app'
         IMAGE_TAG = 'latest'
@@ -18,25 +21,27 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/shivashankarbukka402/Project.git'
+                git branch: "${env.GIT_BRANCH}",
+                    credentialsId: "${env.GIT_CREDENTIALS}",
+                    url: "${env.GIT_URL}"
             }
         }
         stage('Docker Build and Push') {
-            steps {
-                script { 
-                    sh '''
-                        ls -lrt
-                    '''
-                    dir('./my-java-app') {
-                        dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f ${DOCKERFILE_BASE} .")
-                        docker.withRegistry('', "${DOCKER_REGISTRY_CRED_ID}") { 
-                            dockerImage.push() 
-                        }
-                    }
+           stage('Docker Build and Push') {
+                steps {
+                     withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_PASS')]) {
+                       sh '''
+                            docker build -t shiva9828/devops-demo:latest .
+                            echo $DOCKER_PASS | docker login -u shiva9828 --password-stdin
+                            docker push shiva9828/devops-demo:latest
+                          '''
+                    }      
                 }
             }
-        }
+        }       
+            
+
+        
 
         stage('Deploy to EC2') {
             steps {
