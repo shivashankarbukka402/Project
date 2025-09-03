@@ -10,8 +10,11 @@ pipeline {
         GIT_URL        = 'https://github.com/shivashankarbukka402/Project.git'
         GIT_BRANCH     = 'main'
         GIT_CREDENTIALS = 'shivashankarbukka402'
+        IMAGE_TAG = 'latest'
+        DOCKERFILE_BASE = 'Dockerfile'
+        DOCKER_REGISTRY_CRED_ID = 'docker_token'
         DOCKER_USER    = 'shiva9828'
-        DOCKER_IMAGE   = 'devops-demo'
+        DOCKER_IMAGE   = 'shiva9828/devops-demo'
     }
 
     stages {
