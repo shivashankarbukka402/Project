@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven'
+        jdk 'Java11'
+    }
+
+    environment {
+        DOCKER_USER = 'shiva9828'
+        IMAGE_NAME = 'shiva9828/my-java-app'
+        IMAGE_TAG = 'latest'
+        DOCKERFILE_BASE = 'Dockerfile'
+        DOCKER_REGISTRY_CRED_ID = 'docker_token'
+        
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/shivashankarbukka402/Project.git'
+            }
+        }
+        stage('Docker Build and Push') {
+            steps {
+                script { 
+                    sh '''
+                        ls -lrt
+                    '''
+                    dir('./my-java-app') {
+                        dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}", "-f ${DOCKERFILE_BASE} .")
+                        docker.withRegistry('', "${DOCKER_REGISTRY_CRED_ID}") { 
+                            dockerImage.push() 
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(['ec2-ssh-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@43.205.217.170"
+                        docker pull ${DOCKER_USER}/${IMAGE_NAME}:latest &&
+                        docker stop app || true &&
+                        docker rm app || true &&
+                        docker run -d --name app -p 8080:8080 ${DOCKER_USER}/${IMAGE_NAME}:latest
+                    "
+                    '''
+                }
+            }
+        }
+    }
+}
